@@ -1,0 +1,22 @@
+{
+  "name": "simple-pi",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3",
+    "vite": "^8.0.0"
+  },
+  "dependencies": {
+    "@mariozechner/mini-lit": "^0.2.1",
+    "@mariozechner/pi-agent-core": "^0.58.4",
+    "@mariozechner/pi-ai": "^0.58.4",
+    "@mariozechner/pi-web-ui": "^0.58.4",
+    "lit": "^3.3.2"
+  }
+}
