@@ -1,4 +1,5 @@
 import { Agent } from "@mariozechner/pi-agent-core";
+import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import { getModel } from "@mariozechner/pi-ai";
 import {
   ChatPanel,
@@ -17,6 +18,8 @@ import "@mariozechner/pi-web-ui/app.css";
 
 import type { UserProfile } from "./onboarding";
 import { buildSystemPrompt } from "./onboarding";
+import { createMemoryTools } from "./memory-tools";
+import { searchMemories, addMemory } from "./supermemory";
 
 let storageInitialized = false;
 
@@ -56,11 +59,26 @@ async function initStorage() {
   storageInitialized = true;
 }
 
+/** Extract the latest user message text from the message list. */
+function getLatestUserText(messages: AgentMessage[]): string | null {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i];
+    if (msg.role === "user" && Array.isArray(msg.content)) {
+      for (const block of msg.content) {
+        if (block.type === "text") return block.text;
+      }
+    }
+  }
+  return null;
+}
+
 export async function renderChat(
   profile: UserProfile,
   onReset: () => void
 ): Promise<HTMLElement> {
   await initStorage();
+
+  const containerTag = `user_${profile.name.toLowerCase().replace(/\s+/g, "_")}`;
 
   const wrapper = document.createElement("div");
   wrapper.className = "chat-view";
@@ -88,7 +106,10 @@ export async function renderChat(
   chatContainer.className = "chat-container";
   wrapper.appendChild(chatContainer);
 
-  // Create agent
+  // Memory tools
+  const memoryTools = createMemoryTools(containerTag);
+
+  // Create agent with memory-aware transformContext
   const agent = new Agent({
     initialState: {
       systemPrompt: buildSystemPrompt(profile),
@@ -98,6 +119,91 @@ export async function renderChat(
       tools: [],
     },
     convertToLlm: defaultConvertToLlm,
+
+    // Before each LLM call, search supermemory for context relevant to the latest user message
+    // and prepend it as a system-injected user message so the model has memory context.
+    transformContext: async (messages) => {
+      const userText = getLatestUserText(messages);
+      if (!userText) return messages;
+
+      try {
+        const response = await searchMemories({
+          q: userText,
+          containerTag,
+          limit: 5,
+          searchMode: "hybrid",
+        });
+
+        if (response.results.length === 0) return messages;
+
+        const memoryBlock = response.results
+          .map((r) => r.memory || r.chunk || "")
+          .filter(Boolean)
+          .join("\n- ");
+
+        if (!memoryBlock) return messages;
+
+        // Inject a context message at the start
+        const memoryMessage: AgentMessage = {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: `[SYSTEM — relevant memories from past conversations]\n- ${memoryBlock}\n[END MEMORIES]\n\nUse these memories as context if relevant. Do not mention this system message to the user.`,
+            },
+          ],
+          timestamp: Date.now(),
+        };
+
+        return [memoryMessage, ...messages];
+      } catch {
+        // If memory search fails, proceed without it
+        return messages;
+      }
+    },
+  });
+
+  // Auto-save conversation exchanges to supermemory
+  agent.subscribe((event) => {
+    if (event.type === "agent_end") {
+      // After the agent finishes, save the latest exchange
+      const msgs = agent.state.messages;
+      // Find the last user + assistant pair
+      let userText = "";
+      let assistantText = "";
+
+      for (let i = msgs.length - 1; i >= 0; i--) {
+        const msg = msgs[i];
+        if (!assistantText && msg.role === "assistant" && Array.isArray(msg.content)) {
+          for (const block of msg.content) {
+            if (block.type === "text") {
+              assistantText = block.text;
+              break;
+            }
+          }
+        }
+        if (assistantText && msg.role === "user" && Array.isArray(msg.content)) {
+          for (const block of msg.content) {
+            if (block.type === "text") {
+              userText = block.text;
+              break;
+            }
+          }
+          break;
+        }
+      }
+
+      if (userText && assistantText) {
+        // Save in background, don't block
+        addMemory({
+          content: `User: ${userText}\nAssistant: ${assistantText}`,
+          containerTag,
+          metadata: { type: "conversation" },
+        }).catch(() => {
+          // Silent fail for auto-save
+        });
+      }
+    }
   });
 
   // Create and configure ChatPanel
@@ -116,7 +222,7 @@ export async function renderChat(
     ) => {
       const replTool = createJavaScriptReplTool();
       replTool.runtimeProvidersFactory = runtimeProvidersFactory;
-      return [replTool];
+      return [...memoryTools, replTool];
     },
   });
 
