@@ -1,3 +1,5 @@
+import type { UserProfile } from "./onboarding";
+
 const BASE_URL =
   (import.meta.env.VITE_API_URL as string) || "http://localhost:3001";
 
@@ -15,12 +17,13 @@ function authHeaders(token: string): Record<string, string> {
 export async function sendMessage(
   token: string,
   message: string,
+  profile: { name: string; role: string; personality: string; goals: string },
   onEvent: (event: any) => void
 ): Promise<void> {
   const res = await fetch(`${BASE_URL}/api/chat`, {
     method: "POST",
     headers: authHeaders(token),
-    body: JSON.stringify({ message }),
+    body: JSON.stringify({ message, profile }),
   });
 
   if (!res.ok) {
@@ -100,12 +103,12 @@ export async function abortChat(token: string): Promise<void> {
 }
 
 /**
- * Save user profile to server.
+ * Save user profile to Supabase via server.
  */
 export async function saveProfile(
   token: string,
-  profile: object
-): Promise<void> {
+  profile: UserProfile
+): Promise<UserProfile> {
   const res = await fetch(`${BASE_URL}/api/profile`, {
     method: "POST",
     headers: authHeaders(token),
@@ -116,14 +119,16 @@ export async function saveProfile(
     const text = await res.text();
     throw new Error(`Save profile failed (${res.status}): ${text}`);
   }
+
+  return res.json() as Promise<UserProfile>;
 }
 
 /**
- * Get user profile from server.
+ * Get user profile from Supabase via server.
  */
 export async function getProfile(
   token: string
-): Promise<object | null> {
+): Promise<UserProfile | null> {
   const res = await fetch(`${BASE_URL}/api/profile`, {
     method: "GET",
     headers: authHeaders(token),
@@ -138,5 +143,20 @@ export async function getProfile(
     throw new Error(`Get profile failed (${res.status}): ${text}`);
   }
 
-  return res.json();
+  return res.json() as Promise<UserProfile>;
+}
+
+/**
+ * Delete user profile from Supabase via server.
+ */
+export async function deleteProfile(token: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/api/profile`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Delete profile failed (${res.status}): ${text}`);
+  }
 }

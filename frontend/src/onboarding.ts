@@ -5,22 +5,6 @@ export interface UserProfile {
   goals: string;
 }
 
-const STORAGE_KEY = "simple-pi-profile";
-
-export function saveProfile(profile: UserProfile): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
-}
-
-export function loadProfile(): UserProfile | null {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return null;
-  return JSON.parse(raw) as UserProfile;
-}
-
-export function clearProfile(): void {
-  localStorage.removeItem(STORAGE_KEY);
-}
-
 export function buildSystemPrompt(profile: UserProfile): string {
   return `You are a personal AI assistant. Here is who you are working with:
 
@@ -139,7 +123,6 @@ export function renderOnboarding(
           goals,
         };
 
-        saveProfile(profile);
         onComplete(profile);
       });
     }

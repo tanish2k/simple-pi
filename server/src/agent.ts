@@ -48,7 +48,7 @@ export function createAgentForUser(
 ): Agent {
   const containerTag = `user_${userId}`;
   const memoryTools = createMemoryTools(containerTag);
-  const composioTools = createComposioTools();
+  const composioTools = createComposioTools(userId);
   const allTools = [...memoryTools, ...composioTools];
 
   const agent = new Agent({

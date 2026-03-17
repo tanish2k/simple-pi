@@ -8,6 +8,7 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
+    "@composio/core": "^0.6.5",
     "@mariozechner/pi-agent-core": "^0.58.4",
     "@mariozechner/pi-ai": "^0.58.4",
     "@supabase/supabase-js": "^2.49.1",

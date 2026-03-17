@@ -1,7 +1,8 @@
 import "./style.css";
 import { getSession, signInWithGoogle, onAuthStateChange } from "./auth";
-import { loadProfile, clearProfile, renderOnboarding } from "./onboarding";
+import { renderOnboarding } from "./onboarding";
 import { renderChatUI } from "./chat-ui";
+import * as api from "./api";
 import type { UserProfile } from "./onboarding";
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
@@ -41,8 +42,14 @@ function showLogin() {
 
 function showOnboarding(token: string) {
   app.innerHTML = "";
-  const onboardingEl = renderOnboarding((profile) => {
-    showChat(profile, token);
+  const onboardingEl = renderOnboarding(async (profile) => {
+    try {
+      const saved = await api.saveProfile(token, profile);
+      showChat(saved, token);
+    } catch (err: any) {
+      console.error("Failed to save profile:", err);
+      alert("Failed to save profile. Please try again.");
+    }
   });
   app.appendChild(onboardingEl);
 }
@@ -53,7 +60,6 @@ function showChat(profile: UserProfile, token: string) {
     profile,
     token,
     onReset: () => {
-      clearProfile();
       showOnboarding(token);
     },
   });
@@ -86,6 +92,21 @@ async function handleAuthCallback(): Promise<boolean> {
   return false;
 }
 
+async function loadAndRoute(token: string) {
+  try {
+    const profile = await api.getProfile(token);
+    if (profile) {
+      showChat(profile, token);
+    } else {
+      showOnboarding(token);
+    }
+  } catch (err: any) {
+    console.error("Failed to load profile:", err);
+    // Fall back to onboarding if profile load fails
+    showOnboarding(token);
+  }
+}
+
 async function init() {
   // Handle auth callback first
   await handleAuthCallback();
@@ -96,25 +117,13 @@ async function init() {
   if (!session) {
     showLogin();
   } else {
-    const token = session.access_token;
-    const profile = loadProfile();
-    if (profile) {
-      showChat(profile, token);
-    } else {
-      showOnboarding(token);
-    }
+    await loadAndRoute(session.access_token);
   }
 
   // Listen for auth state changes
   onAuthStateChange(async (event, session) => {
     if (event === "SIGNED_IN" && session) {
-      const token = session.access_token;
-      const profile = loadProfile();
-      if (profile) {
-        showChat(profile, token);
-      } else {
-        showOnboarding(token);
-      }
+      await loadAndRoute(session.access_token);
     } else if (event === "SIGNED_OUT") {
       showLogin();
     }

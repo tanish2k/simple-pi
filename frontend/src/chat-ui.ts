@@ -79,8 +79,13 @@ export function renderChatUI(config: ChatUIConfig): HTMLElement {
   `;
   wrapper.appendChild(header);
 
-  header.querySelector("#reset-btn")!.addEventListener("click", () => {
+  header.querySelector("#reset-btn")!.addEventListener("click", async () => {
     if (confirm("Reset your profile and start over?")) {
+      try {
+        await api.deleteProfile(token);
+      } catch (err: any) {
+        console.error("Failed to delete profile:", err);
+      }
       onReset();
     }
   });
@@ -237,11 +242,14 @@ export function renderChatUI(config: ChatUIConfig): HTMLElement {
     let assistantContent = "";
 
     try {
-      await api.sendMessage(token, text, (event) => {
+      await api.sendMessage(token, text, profile, (event) => {
         if (abortRequested) return;
 
-        if (event.type === "message_update" && event.text_delta) {
-          assistantContent += event.text_delta;
+        if (
+          event.type === "message_update" &&
+          event.assistantMessageEvent?.type === "text_delta"
+        ) {
+          assistantContent += event.assistantMessageEvent.delta;
           updateLastAssistantMessage(assistantContent);
         } else if (event.type === "message_start") {
           // Reset content for new message

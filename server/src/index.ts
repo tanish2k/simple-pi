@@ -4,6 +4,8 @@ import cors from "cors";
 import { config } from "./config.js";
 import { authMiddleware } from "./auth.js";
 import chatRoutes from "./routes/chat.js";
+import profileRoutes from "./routes/profile.js";
+import composioRoutes from "./routes/composio.js";
 
 const app = express();
 
@@ -28,9 +30,14 @@ app.get("/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
+// Composio OAuth callback – no auth required (browser redirect from Composio)
+app.get("/api/composio/callback", composioRoutes);
+
 // Authenticated API routes
 app.use("/api", authMiddleware);
 app.use("/api/chat", chatRoutes);
+app.use("/api/profile", profileRoutes);
+app.use("/api/composio", composioRoutes);
 
 // Global error handler
 app.use(
