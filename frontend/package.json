@@ -1,0 +1,22 @@
+{
+  "name": "simple-pi-frontend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 5173",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@mariozechner/mini-lit": "^0.2.1",
+    "@mariozechner/pi-agent-core": "^0.58.4",
+    "@mariozechner/pi-ai": "^0.58.4",
+    "@mariozechner/pi-web-ui": "^0.58.4",
+    "@supabase/supabase-js": "^2.49.1",
+    "lit": "^3.3.2"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3",
+    "vite": "^8.0.0"
+  }
+}

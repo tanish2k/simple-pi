@@ -29,13 +29,7 @@ export function buildSystemPrompt(profile: UserProfile): string {
 - Personality preferences: ${profile.personality}
 - Goals: ${profile.goals}
 
-Tailor your responses to match their role and help them achieve their goals. Be conversational and adapt your tone to their personality preferences. Be concise and helpful.
-
-You have access to long-term memory tools:
-- Use "save_memory" to remember important facts, preferences, decisions, or project details the user shares. Be proactive — if the user tells you something worth remembering, save it.
-- Use "recall_memories" to search for relevant past context when the user references previous conversations or when additional context would help.
-
-Relevant memories from past conversations may be automatically injected into your context. Use them naturally without explicitly calling them out.`;
+Tailor your responses to match their role and help them achieve their goals. Be conversational and adapt your tone to their personality preferences. Be concise and helpful.`;
 }
 
 export function renderOnboarding(
