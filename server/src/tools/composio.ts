@@ -32,11 +32,19 @@ export async function initiateConnection(
   callbackUrl: string
 ) {
   const composio = getComposio();
-  // toolkits.authorize is the simplest path – it resolves the auth config by
-  // toolkit slug and initiates the OAuth flow in one call.
+
+  // Look up the auth config for this toolkit
+  const configs = await composio.authConfigs.list({ toolkit });
+  const authConfig = configs.items?.[0];
+  if (!authConfig) {
+    throw new Error(
+      `No auth config found for toolkit "${toolkit}". Create one at platform.composio.dev → Auth Configs.`
+    );
+  }
+
   const connRequest = await composio.connectedAccounts.initiate(
     userId,
-    toolkit, // The SDK accepts a toolkit slug here as authConfigId
+    authConfig.id,
     { callbackUrl }
   );
   return {

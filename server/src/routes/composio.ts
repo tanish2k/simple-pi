@@ -25,9 +25,6 @@ function isValidToolkit(value: unknown): value is Toolkit {
 
 /**
  * POST /connect — Initiate an OAuth connection for a toolkit.
- *
- * Body: { toolkit: "gmail" | "googlecalendar" | "googledrive" | "salesforce" }
- * Response: { redirectUrl: string }
  */
 router.post(
   "/connect",
@@ -48,20 +45,24 @@ router.post(
     }
 
     try {
-      // Build the callback URL for Composio to redirect to after OAuth.
-      const protocol = req.headers["x-forwarded-proto"] || "https";
-      const host = req.headers["x-forwarded-host"] || req.headers.host;
-      const callbackUrl = `${protocol}://${host}/api/composio/callback`;
+      const callbackUrl =
+        process.env.COMPOSIO_CALLBACK_URL ||
+        (() => {
+          const protocol =
+            req.headers["x-forwarded-proto"] ||
+            (req.secure ? "https" : "http");
+          const host = req.headers["x-forwarded-host"] || req.headers.host;
+          return `${protocol}://${host}/api/composio/callback`;
+        })();
 
-      const result = await initiateConnection(
-        user.id,
-        toolkit,
-        callbackUrl
-      );
+      console.log(`Composio connect: toolkit=${toolkit}, callback=${callbackUrl}`);
 
+      const result = await initiateConnection(user.id, toolkit, callbackUrl);
+
+      console.log(`Composio connect result: redirectUrl=${result.redirectUrl}`);
       res.json({ redirectUrl: result.redirectUrl });
     } catch (err: any) {
-      console.error("Composio connect error:", err);
+      console.error("Composio connect error:", err.message || err);
       res.status(500).json({
         error: err.message || "Failed to initiate connection",
       });
@@ -71,8 +72,6 @@ router.post(
 
 /**
  * GET /connections — List active Composio connections for the authenticated user.
- *
- * Response: { connections: [...] }
  */
 router.get(
   "/connections",
@@ -85,9 +84,10 @@ router.get(
 
     try {
       const connections = await getActiveConnections(user.id);
+      console.log(`Composio connections for ${user.id}: ${connections.length} active`);
       res.json({ connections });
     } catch (err: any) {
-      console.error("Composio connections error:", err);
+      console.error("Composio connections error:", err.message || err);
       res.status(500).json({
         error: err.message || "Failed to list connections",
       });
@@ -96,32 +96,35 @@ router.get(
 );
 
 /**
- * GET /callback — OAuth callback endpoint.
+ * Standalone callback handler (mounted directly, NOT through the router,
+ * so it runs BEFORE the auth middleware).
  *
- * Composio redirects the user here after OAuth completes.
- * Query params typically include: status, connected_account_id
- *
- * Redirects the user to the frontend with a status indicator.
+ * Composio redirects the browser here after OAuth.
+ * Query params: status, connectedAccountId, appName
  */
-router.get(
-  "/callback",
-  async (req: Request, res: Response): Promise<void> => {
-    const { status, connected_account_id } = req.query as {
-      status?: string;
-      connected_account_id?: string;
-    };
+export async function callbackHandler(
+  req: Request,
+  res: Response
+): Promise<void> {
+  const { status, connectedAccountId, appName } = req.query as {
+    status?: string;
+    connectedAccountId?: string;
+    appName?: string;
+  };
 
-    // Determine the frontend origin for the redirect.
-    const frontendOrigin =
-      process.env.FRONTEND_URL || "http://localhost:5173";
+  console.log(
+    `Composio callback: status=${status}, connectedAccountId=${connectedAccountId}, appName=${appName}`
+  );
 
-    const params = new URLSearchParams();
-    if (status) params.set("status", status);
-    if (connected_account_id)
-      params.set("connected_account_id", connected_account_id);
+  const frontendOrigin =
+    process.env.FRONTEND_URL || "http://localhost:5173";
 
-    res.redirect(`${frontendOrigin}/integrations?${params.toString()}`);
-  }
-);
+  const params = new URLSearchParams();
+  if (status) params.set("status", status);
+  if (connectedAccountId) params.set("connected_account_id", connectedAccountId);
+  if (appName) params.set("app", appName);
+
+  res.redirect(`${frontendOrigin}/integrations?${params.toString()}`);
+}
 
 export default router;

@@ -5,7 +5,7 @@ import { config } from "./config.js";
 import { authMiddleware } from "./auth.js";
 import chatRoutes from "./routes/chat.js";
 import profileRoutes from "./routes/profile.js";
-import composioRoutes from "./routes/composio.js";
+import composioRoutes, { callbackHandler } from "./routes/composio.js";
 
 const app = express();
 
@@ -25,13 +25,19 @@ app.use(
 // JSON body parser
 app.use(express.json());
 
+// Request logging
+app.use((req, _res, next) => {
+  console.log(`${req.method} ${req.path}`);
+  next();
+});
+
 // Health check (no auth required)
 app.get("/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
 // Composio OAuth callback – no auth required (browser redirect from Composio)
-app.get("/api/composio/callback", composioRoutes);
+app.get("/api/composio/callback", callbackHandler);
 
 // Authenticated API routes
 app.use("/api", authMiddleware);
