@@ -428,3 +428,142 @@ body {
 .message.assistant em {
   font-style: italic;
 }
+
+/* Integrations page */
+.integrations-page {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 100dvh;
+  padding: 48px 24px;
+}
+
+.integrations-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px;
+  max-width: 600px;
+  width: 100%;
+}
+
+.integrations-header {
+  margin-bottom: 28px;
+}
+
+.integrations-header h1 {
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.integrations-header .subtitle {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.btn-back {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 0;
+  margin-bottom: 16px;
+  display: inline-block;
+}
+
+.btn-back:hover {
+  color: var(--text);
+}
+
+.integrations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.integrations-list .loading {
+  color: var(--text-muted);
+  font-size: 14px;
+  text-align: center;
+  padding: 20px;
+}
+
+.integration-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  transition: border-color 0.2s;
+}
+
+.integration-item:hover {
+  border-color: var(--text-muted);
+}
+
+.integration-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  border-radius: 8px;
+}
+
+.integration-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.integration-name {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.integration-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.integration-status {
+  flex-shrink: 0;
+}
+
+.status-connected {
+  font-size: 13px;
+  color: #34d399;
+  background: rgba(52, 211, 153, 0.1);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-weight: 500;
+}
+
+.btn-connect {
+  font-size: 13px;
+  color: var(--accent);
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  padding: 6px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.btn-connect:hover {
+  background: rgba(99, 102, 241, 0.2);
+}
+
+.btn-connect:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

@@ -160,3 +160,57 @@ export async function deleteProfile(token: string): Promise<void> {
     throw new Error(`Delete profile failed (${res.status}): ${text}`);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Composio integrations
+// ---------------------------------------------------------------------------
+
+export type Toolkit = "gmail" | "googlecalendar" | "googledrive" | "salesforce";
+
+export interface ComposioConnection {
+  id: string;
+  appName?: string;
+  status?: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Initiate OAuth connection for a toolkit. Returns a redirect URL.
+ */
+export async function connectToolkit(
+  token: string,
+  toolkit: Toolkit
+): Promise<{ redirectUrl: string }> {
+  const res = await fetch(`${BASE_URL}/api/composio/connect`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({ toolkit }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Connect failed (${res.status}): ${text}`);
+  }
+
+  return res.json();
+}
+
+/**
+ * List active Composio connections for the user.
+ */
+export async function getConnections(
+  token: string
+): Promise<ComposioConnection[]> {
+  const res = await fetch(`${BASE_URL}/api/composio/connections`, {
+    method: "GET",
+    headers: authHeaders(token),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Get connections failed (${res.status}): ${text}`);
+  }
+
+  const data = await res.json();
+  return data.connections || [];
+}

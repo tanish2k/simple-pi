@@ -2,10 +2,15 @@ import "./style.css";
 import { getSession, signInWithGoogle, onAuthStateChange } from "./auth";
 import { renderOnboarding } from "./onboarding";
 import { renderChatUI } from "./chat-ui";
+import { renderIntegrations } from "./integrations";
 import * as api from "./api";
 import type { UserProfile } from "./onboarding";
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
+
+// Keep track of current auth token and profile for navigation
+let currentToken: string | null = null;
+let currentProfile: UserProfile | null = null;
 
 function showLogin() {
   app.innerHTML = "";
@@ -45,6 +50,7 @@ function showOnboarding(token: string) {
   const onboardingEl = renderOnboarding(async (profile) => {
     try {
       const saved = await api.saveProfile(token, profile);
+      currentProfile = saved;
       showChat(saved, token);
     } catch (err: any) {
       console.error("Failed to save profile:", err);
@@ -56,32 +62,49 @@ function showOnboarding(token: string) {
 
 function showChat(profile: UserProfile, token: string) {
   app.innerHTML = "";
+  currentProfile = profile;
+  currentToken = token;
   const chatEl = renderChatUI({
     profile,
     token,
     onReset: () => {
       showOnboarding(token);
     },
+    onIntegrations: () => {
+      showIntegrations(token);
+    },
   });
   app.appendChild(chatEl);
 }
 
+function showIntegrations(token: string) {
+  app.innerHTML = "";
+  const integrationsEl = renderIntegrations({
+    token,
+    onBack: () => {
+      if (currentProfile) {
+        showChat(currentProfile, token);
+      }
+    },
+  });
+  app.appendChild(integrationsEl);
+}
+
 async function handleAuthCallback(): Promise<boolean> {
-  // Check if the current URL is the auth callback
   const path = window.location.pathname;
   const hash = window.location.hash;
   const search = window.location.search;
 
-  if (path === "/auth/callback" || hash.includes("access_token") || search.includes("code=")) {
-    // Supabase client will handle the token exchange automatically
-    // Wait a moment for Supabase to process the callback
+  if (
+    path === "/auth/callback" ||
+    hash.includes("access_token") ||
+    search.includes("code=")
+  ) {
     const session = await getSession();
     if (session) {
-      // Clean up the URL
       window.history.replaceState({}, "", "/");
       return true;
     }
-    // If no session yet, wait briefly and try again
     await new Promise((resolve) => setTimeout(resolve, 500));
     const retrySession = await getSession();
     if (retrySession) {
@@ -93,25 +116,47 @@ async function handleAuthCallback(): Promise<boolean> {
 }
 
 async function loadAndRoute(token: string) {
+  currentToken = token;
+
+  // Check if we're returning from a Composio OAuth callback
+  const path = window.location.pathname;
+  const search = new URLSearchParams(window.location.search);
+  if (path === "/integrations") {
+    const status = search.get("status");
+    if (status) {
+      // Clean up URL
+      window.history.replaceState({}, "", "/");
+    }
+    // Load profile first, then show integrations
+    try {
+      const profile = await api.getProfile(token);
+      if (profile) {
+        currentProfile = profile;
+        showIntegrations(token);
+        return;
+      }
+    } catch {
+      // Fall through to normal routing
+    }
+  }
+
   try {
     const profile = await api.getProfile(token);
     if (profile) {
+      currentProfile = profile;
       showChat(profile, token);
     } else {
       showOnboarding(token);
     }
   } catch (err: any) {
     console.error("Failed to load profile:", err);
-    // Fall back to onboarding if profile load fails
     showOnboarding(token);
   }
 }
 
 async function init() {
-  // Handle auth callback first
   await handleAuthCallback();
 
-  // Check current auth state
   const session = await getSession();
 
   if (!session) {
@@ -120,7 +165,6 @@ async function init() {
     await loadAndRoute(session.access_token);
   }
 
-  // Listen for auth state changes
   onAuthStateChange(async (event, session) => {
     if (event === "SIGNED_IN" && session) {
       await loadAndRoute(session.access_token);

@@ -12,6 +12,7 @@ interface ChatUIConfig {
   profile: UserProfile;
   token: string;
   onReset: () => void;
+  onIntegrations: () => void;
 }
 
 /**
@@ -55,7 +56,7 @@ function renderMarkdown(text: string): string {
 }
 
 export function renderChatUI(config: ChatUIConfig): HTMLElement {
-  const { profile, token, onReset } = config;
+  const { profile, token, onReset, onIntegrations } = config;
   const messages: ChatMessage[] = [];
   let isStreaming = false;
   let abortRequested = false;
@@ -73,11 +74,16 @@ export function renderChatUI(config: ChatUIConfig): HTMLElement {
       <span class="role-badge">${escapeHtml(profile.role)}</span>
     </div>
     <div class="chat-header-right">
+      <button class="btn-reset" id="integrations-btn">Integrations</button>
       <button class="btn-reset" id="reset-btn">Reset Profile</button>
       <button class="btn-reset" id="signout-btn">Sign Out</button>
     </div>
   `;
   wrapper.appendChild(header);
+
+  header.querySelector("#integrations-btn")!.addEventListener("click", () => {
+    onIntegrations();
+  });
 
   header.querySelector("#reset-btn")!.addEventListener("click", async () => {
     if (confirm("Reset your profile and start over?")) {
